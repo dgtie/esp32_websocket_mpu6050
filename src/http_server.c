@@ -39,14 +39,24 @@ static const httpd_uri_t hello = {
     .user_ctx  = test_html
 };
 
-extern char utils_js[];
-static const httpd_uri_t utils = {
-    .uri       = "/utils.js",
+extern char matrix_js[];
+static const httpd_uri_t matrix = {
+    .uri       = "/gl-matrix-min.js",
     .method    = HTTP_GET,
     .handler   = hello_get_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = utils_js
+    .user_ctx  = matrix_js
+};
+
+extern char cube_js[];
+static const httpd_uri_t cube = {
+    .uri       = "/cube.js",
+    .method    = HTTP_GET,
+    .handler   = hello_get_handler,
+    /* Let's pass response string in user
+     * context to demonstrate it's usage */
+    .user_ctx  = cube_js
 };
 
 /* This handler allows the custom error handling functionality to be
@@ -80,7 +90,8 @@ static httpd_handle_t start_webserver(void)
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
         httpd_register_uri_handler(server, &hello);
-        httpd_register_uri_handler(server, &utils);
+        httpd_register_uri_handler(server, &matrix);
+        httpd_register_uri_handler(server, &cube);
         httpd_register_uri_handler(server, &ws);
         return server;
     }

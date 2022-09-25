@@ -1,19 +1,19 @@
 <!DOCTYPE HTML>
 
-<html>
+<html lang="en">
    <head>
-
-      <script src="utils.js"> </script>
-      
+      <meta charset="utf-8" />
+      <title>mpu6050</title>
+      <script src="gl-matrix-min.js" defer> </script>
+      <script src="cube.js" defer> </script>
       <script>
 
          var ws;
-         let ax=10000, ay=0, az=0;
-         var moveview = 0;
-         var transform_m = [[1,0,0],[0,1,0],[0,0,1]];
-         var transform_t = [[1,0,0],[0,1,0],[0,0,1]];
-         var pitch0;
-         var yaw0;
+         
+         function toInt(hi, lo) {
+            var i = hi * 256 + lo;
+            return i > 32767 ? i - 65536 : i;
+         }
 
          function WebSocketTest() {
                
@@ -36,9 +36,9 @@
                if (evt.data instanceof ArrayBuffer) {
                  var data = new Uint8Array(evt.data);
                  var temp = 36.53 + toInt(data[6], data[7]) / 340;
-                 ax = toInt(data[0], data[1]);
-                 ay = toInt(data[2], data[3]);
-                 az = toInt(data[4], data[5]);
+                 var ax = toInt(data[0], data[1]);
+                 var ay = toInt(data[2], data[3]);
+                 var az = toInt(data[4], data[5]);
                  var gx = toInt(data[8], data[9]);
                  var gy = toInt(data[10], data[11]);
                  var gz = toInt(data[12], data[13]);
@@ -49,6 +49,7 @@
                  document.querySelector('#gx').value = gx;
                  document.querySelector('#gy').value = gy;
                  document.querySelector('#gz').value = gz;
+                 drawCube(Math.atan2(ay,az),Math.atan2(az,ax),Math.atan2(ax,ay));
                } else {
                  document.querySelector('#receive').value = evt.data;
                }
@@ -69,105 +70,15 @@
             ws.send(document.querySelector('#string').value);
          }
 
-         function draw() {
-            window.requestAnimationFrame(draw);
-            var v = [ax / 100, ay / 100, az / 100];
-            var t = matrix_matrix(transform_m, transform_t);
-            v = matrix_vector(t, v);
-            var canvas = document.getElementById("myCanvas");
-            var ctx = canvas.getContext("2d");
-            ctx.clearRect(0,0,700,700);
-            ctx.beginPath();
-            ctx.moveTo(350,350);
-            ctx.lineTo(v[0]+350, v[1]+350);
-            ctx.stroke();
-            if ((ax == 0) && (ay == 0) && (az == 0)) return;
-            if (moveview) {
-              ctx.beginPath();
-              ctx.arc(350,350,350,0,2*Math.PI);
-              ctx.stroke();
-            }
-         }
-
-        function touchstart(evt) {
-           var canvas = document.getElementById("myCanvas");
-           var rect = canvas.getBoundingClientRect();
-           var x = evt.touches[0].clientX - rect.left - 350;
-           var y = evt.touches[0].clientY - rect.top - 350;
-           var r = Math.sqrt(x*x + y*y);
-           if (r < 350) {
-             moveview = 1;
-             pitch0 = pitch(y, 350);
-             yaw0 = yaw(x, 350);
-           }
-           document.querySelector('#ax').value = r;
-        }
-        function touchmove(evt) {
-           if (moveview) {
-             var canvas = document.getElementById("myCanvas");
-             var rect = canvas.getBoundingClientRect();
-             var x = evt.touches[0].clientX - rect.left - 350;
-             var y = evt.touches[0].clientY - rect.top - 350;
-             var pitch_d = pitch(y, 350) - pitch0;
-             var yaw_d = yaw(x, 350) - yaw0;
-             transform_t = matrix_matrix(pitch_m(pitch_d), yaw_m(yaw_d));
-             var r = Math.sqrt(x*x + y*y);
-//             document.querySelector('#ax').value = r;
-             if (r > 350) moveview = 0;
-           }
-           evt.preventDefault();
-        }
-        function mousedown(evt) {
-           var x = evt.offsetX - 350;
-           var y = evt.offsetY - 350;
-           var r = Math.sqrt(x*x + y*y);
-           if (r < 350) {
-             moveview = 1;
-             pitch0 = pitch(y, 350);
-             yaw0 = yaw(x, 350);
-           }
-        }
-        function mousemove(evt) {
-           if (moveview) {
-             var x = evt.offsetX - 350;
-             var y = evt.offsetY - 350;
-             var pitch_d = pitch(y, 350) - pitch0;
-             var yaw_d = yaw(x, 350) - yaw0;
-             transform_t = matrix_matrix(pitch_m(pitch_d), yaw_m(yaw_d));
-             var r = Math.sqrt(x*x + y*y);
-             document.querySelector('#ax').value = r;
-             if (r > 350) moveview = 0;
-           }
-        }
-        function touchend(evt) {
-           transform_m = matrix_matrix(transform_m, transform_t);
-           transform_t = [[1,0,0],[0,1,0],[0,0,1]];
-           moveview = 0;
-        }
-
-        function initialise() {
-           draw();
-           var canvas = document.getElementById("myCanvas");
-           canvas.addEventListener('mousedown', mousedown, false);
-           canvas.addEventListener('mousemove', mousemove, false);
-           canvas.addEventListener('mouseup', touchend, false);
-           canvas.addEventListener('touchstart', touchstart, false);
-           canvas.addEventListener('touchmove', touchmove, false);
-           canvas.addEventListener('touchend', touchend, false);
-        }
-
       </script>
       <style>
         body, input, button {
           font-size: 50px;
         }
-        canvas {
-          border: 2px solid blue;
-        }
       </style>
    </head>
    
-   <body onload="initialise()">
+   <body>
       <p id="support">WebSocket NOT supported by your Browser</p>
       <input id="host" size = "10" disabled value="192.168.4.1" />
       <input id="port" size = "4" disabled value="80" /> <br/>
@@ -188,7 +99,7 @@
       <input id="gy" size="7" disabled />Y<br/>
       <input id="az" size="7" disabled />
       <input id="gz" size="7" disabled />Z<br/>
-      <canvas id="myCanvas" width="700" height="700" >
+      <canvas id="glcanvas" width="700" height="480" >
       </canvas>
       <script type = "text/javascript">
          if ("WebSocket" in window) {
